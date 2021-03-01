@@ -6,10 +6,13 @@ import string
 import random
 from django.views import View
 from django.http import request, JsonResponse
-from my_settings import SECRET
+from my_settings import SECRET, ALGORITHMS
 from .models import User,Allow
 from django.core.mail import send_mail, EmailMessage
 from django.template.loader import render_to_string
+from django.http import HttpResponse
+
+from user.utils import check_user
 
 class DoubleCheckView(View):
     def post(self, request):
@@ -124,10 +127,13 @@ class SignInView(View):
         try:
             if User.objects.filter(username_id=data['ID']).exists():
                 login_user = User.objects.get(username_id=data['ID'])
-                inspect_passoword = bcrypt.checkpw(data['password'].encode('utf-8'),login_user.password.encode('utf-8'))
+                inspect_password = bcrypt.checkpw(data['password'].encode('utf-8'),login_user.password.encode('utf-8'))
 
-                if inspect_passoword:
-                    access_token = jwt.encode({'id':login_user.id,},SECRET, algorithm='HS256')
+                if inspect_password:
+                    access_token = jwt.encode(
+                        {'id':login_user.id,},
+                        SECRET, 
+                        algorithm=ALGORITHMS)
                     for_client_token = access_token.decode('utf-8')
                     return JsonResponse({'authorization':for_client_token}, status=200)
                 else: return JsonResponse({'message':'비밀번호가 일치하지 않습니다'},status=400)
@@ -148,7 +154,7 @@ class SignInName(View): # 유저의 토큰을 확인해서 이름을 보내주�
         if for_client_token is None:
             return JsonResponse({'message': 'token please'},status=400)
         try:
-            user_id = jwt.decode(for_client_token, SECRET, algorithms='HS256')
+            user_id = jwt.decode(for_client_token, SECRET, algorithm=ALGORITHMS)
             user = User.objects.get(id=user_id['id'])
             token_user_name = user.name
             return JsonResponse({'message':token_user_name},status=200)
@@ -156,5 +162,3 @@ class SignInName(View): # 유저의 토큰을 확인해서 이름을 보내주�
             return JsonResponse({'message':'unknown_user'},status=401)
         except jwt.DecodeError:
             return JsonResponse({'message':'invalid_token'},status=401)
-
-

@@ -14,8 +14,8 @@ class OrderView(View):
     @check_user
     def post(self, request):
         data    = json.loads(request.body)
-        user_id = request.user.id
-
+        print(data)
+        user_id = request.user
         try:
             product_id = data['product_id']
             quantity   = data['quantity']
@@ -79,10 +79,10 @@ class OrderView(View):
     @check_user
     def patch(self, request, product_id):
         data    = json.loads(request.body)
-        user_id = request.user.id
+        user_id = request.user
 
         try:
-            quantity        = data['quantity']
+            quantity        = data['count']
         
         except KeyError:
             return JsonResponse({'message': "KEY_ERROR"}, status = 400)
@@ -98,17 +98,17 @@ class OrderView(View):
 
     @check_user
     def get(self, request):
-        user_id = request.user.id
+        user_id = request.user
         user_products = Order.objects.filter(user_id=user_id, order_status_id=1).prefetch_related('orderitem_set', 'orderitem_set__product').all().order_by('-id')
 
         return JsonResponse({
             'product' : [
             {
-                'product_id'       : products.product.id,
-                'name'             : products.product.name,
-                'quantity'         : products.quantity,
+                'id'       : products.product.id,
+                'productName'             : products.product.name,
+                'count'         : products.quantity,
                 'price'            : products.product.price,
-                'thumbnail_image'  : products.product.thumbnail_image,
+                'url'  : products.product.thumbnail_image,
             } 
             for user_product in user_products for products in user_product.orderitem_set.all()
         ]
@@ -118,10 +118,10 @@ class OrderDeleteView(View):
     @check_user
     def post(self, request):
         data = json.loads(request.body)
-        user_id = request.user.id
+        user_id = request.user
         
         try:
-            product_ids = data['product_ids']
+            product_ids = data['ids']
 
         except KeyError:
             return JsonResponse({'message': "KEY_ERROR"}, status=400)
